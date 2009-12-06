@@ -1,4 +1,4 @@
-;;; anything-c-yasnippet-opt.el --- anything-c-yasnippet.el optional utilities
+;;; anything-howm.el
 
 ;; Copyright (C) 2009,2010  kitokitoki
 
@@ -19,6 +19,16 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;; Installation:
+
+;; install requires libraries:
+;; `anything.el' http://www.emacswiki.org/emacs/anything.el
+;; `anything-match-plugin.el'  http://www.emacswiki.org/emacs/anything-match-plugin.el
+;; `anything-migemo.el' http://www.emacswiki.org/emacs/anything-migemo.el
+;; `howm'  http://howm.sourceforge.jp/index-j.html
+
+;; `anything-howm.el' http://github.com/kitokitoki/anything-howm (this file)
+
 ;;; Setting Sample
 
 ;; (require 'anything-howm)
@@ -31,7 +41,9 @@
 
 ;; Change Log
 
-;; 1.0.1: 新しいメモをつくる機能を追加
+;; 1.0.2: ファイル削除、新ウィンドウで開く、新フレームで開くアクションを追加
+;;        リファクタリング
+;; 1.0.1: 新しいメモをつくる機能を追加, migemo 対応
 ;; 1.0.0: 新規作成
 
 ;;; Commentary:
@@ -58,9 +70,9 @@
   '((init .
       (lambda ()
         (setq anything-howm-selected-text
-              (if mark-active
-                  (buffer-substring-no-properties (region-beginning) (region-end))
-                ""))))
+          (if mark-active
+              (buffer-substring-no-properties (region-beginning) (region-end))
+            ""))))
     (name . "最近のメモ")
     (candidates .
       (lambda ()
@@ -70,21 +82,31 @@
       (("Open howm file" .
           (lambda (candidate)
             (find-file
-             (anything-howm-select-file-by-title
-               candidate
-               (howm-recent-menu anything-howm-recent-menu-number-limit)))))
+             (anything-howm-select-file-by-title candidate))))
+       ("Open howm file in other window" .
+          (lambda (candidate)
+            (find-file-other-window
+             (anything-howm-select-file-by-title candidate))))
+       ("Open howm file in other frame" .
+          (lambda (candidate)
+            (find-file-other-frame
+             (anything-howm-select-file-by-title candidate))))
        ("Create new memo" .
           (lambda (template)
             (anything-howm-create-new-memo "")))
        ("Create new memo on region" .
           (lambda (template)
-            (anything-howm-create-new-memo anything-howm-selected-text)))))
+            (anything-howm-create-new-memo anything-howm-selected-text)))
+       ("Delete File" .
+          (lambda (candidate)
+            (if (y-or-n-p (format "Really delete file %s? "
+                  (anything-howm-select-file-by-title candidate)))
+              (delete-file
+                (anything-howm-select-file-by-title candidate)))))))
     (persistent-action .
       (lambda (candidate)
         (anything-howm-persistent-action
-         (anything-howm-select-file-by-title
-           candidate
-           (howm-recent-menu anything-howm-recent-menu-number-limit)))))
+         (anything-howm-select-file-by-title candidate))))
     (cleanup .
       (lambda ()
         (if (get-buffer anything-howm-persistent-action-buffer)
@@ -100,8 +122,8 @@
       (pop-to-buffer b)
       (howm-mode t)))
 
-(defun anything-howm-select-file-by-title (title recent-menu-list)
-  (loop for recent-menu-x in recent-menu-list
+(defun anything-howm-select-file-by-title (title)
+  (loop for recent-menu-x in (howm-recent-menu anything-howm-recent-menu-number-limit)
         for list-item-file  = (first recent-menu-x)
         for list-item-name  = (second recent-menu-x)
         if (string-equal title list-item-name)
