@@ -52,7 +52,8 @@
 
 ;; howm-list-all に基づくソースの提供
 ;; 全文検索機能
-
+;; (defun anything-c-moccur-occur-by-moccur-only-function ()を元に
+;; (defun anything-howm-search-only-title ()をつくる
 ;;; Code:
 
 (require 'cl)
@@ -65,8 +66,9 @@
 (defvar anything-howm-recent-menu-number-limit 10)
 (defvar anything-howm-persistent-action-buffer "*howm-tmp*")
 (defvar anything-howm-selected-text "")
+(defvar anything-howm-default-title "")
 
-(setq anything-c-howm-recent
+(defvar anything-c-howm-recent
   '((init .
       (lambda ()
         (setq anything-howm-selected-text
@@ -74,6 +76,7 @@
               (buffer-substring-no-properties (region-beginning) (region-end))
             ""))))
     (name . "最近のメモ")
+;;(howm-list-all) で全部とれる
     (candidates .
       (lambda ()
         (anything-howm-get-recent-title-list
@@ -134,23 +137,39 @@
         for list-item-name  = (second recent-menu-x)
         collect list-item-name))
 
-;; http://www.bookshelf.jp/soft/meadow_38.html#SEC560 を参考にしました。
 (defun anything-howm-create-new-memo (text)
-  (let (category
-        memo-text str
-        (cbuf (current-buffer))
-        (via (cond
-              ((string= 'w3m-mode major-mode)
-               w3m-current-url))))
+  (let (memo-text str
+        (cbuf (current-buffer)))
     (setq str text)
-    (setq category (read-from-minibuffer "input title : "
-                                         "[]"))
-    (howm-create-file-with-title category nil nil nil "")
-    (goto-char (point-max))
+    (howm-create-file-with-title anything-howm-default-title nil nil nil "")
     (save-excursion
-      (insert str)
-      (if via
-          (insert (concat "\nvia " via))))))
+      (goto-char (point-max))
+      (insert str))
+    (goto-char (point-min))
+    (end-of-line)))
+
+(defun howm-create-file-with-title (title &optional
+                                    which-template not-use-file here content)
+  (let ((b (current-buffer)))
+    (when (not here)
+      (howm-create-file))
+    (cond ((howm-buffer-empty-p) nil)
+          ((and here howm-create-here-just) (beginning-of-line))
+          (t (howm-create-newline)))
+    (let ((p (point))
+          (insert-f (lambda (switch)
+                      (howm-insert-template (if switch title "")
+                                            b which-template (not switch))))
+          (use-file (not not-use-file)))
+      ;; second candidate which appears when undo is called
+      (let ((end (funcall insert-f not-use-file)))
+        (save-excursion
+          (goto-char end)
+          (insert (or content "")))
+        (undo-boundary)
+        (delete-region p end))
+      (funcall insert-f use-file))
+    (howm-create-finish)))
 
 (defun anything-howm-search ()
   (interactive)
