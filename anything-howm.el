@@ -29,15 +29,20 @@
 
 ;; `anything-howm.el' http://github.com/kitokitoki/anything-howm (this file)
 
+;;  `anything-grep.el' ;; 将来的には自前実装にする予定です。
+
 ;;; Setting Sample
 
 ;; (require 'anything-howm)
 ;; (setq anything-howm-recent-menu-number-limit 70)
+;; (setq anything-howm-data-directory "~/Dropbox/howm")
 ;; (global-set-key (kbd "M-h") 'anything-howm-search)
 ;; (setq anything-sources
 ;;       (list anything-c-source-buffers
 ;;               ...
 ;;             ))
+;; (setq anything-howm-data-directory "/home/taro/howm")
+;; (global-set-key (kbd "M-8") 'anything-howm-grep)
 
 ;; Change Log
 
@@ -67,8 +72,10 @@
 (defvar anything-howm-persistent-action-buffer "*howm-tmp*")
 (defvar anything-howm-selected-text "")
 (defvar anything-howm-default-title "")
+(defvar anything-howm-search-word "symfony")
+(defvar anything-howm-data-directory "/home")
 
-(defvar anything-c-howm-recent
+(setq anything-c-howm-recent
   '((init .
       (lambda ()
         (setq anything-howm-selected-text
@@ -76,11 +83,11 @@
               (buffer-substring-no-properties (region-beginning) (region-end))
             ""))))
     (name . "最近のメモ")
-;;(howm-list-all) で全部とれる
     (candidates .
       (lambda ()
         (anything-howm-get-recent-title-list
          (howm-recent-menu anything-howm-recent-menu-number-limit))))
+    (candidate-number-limit . 9999)
     (action .
       (("Open howm file" .
           (lambda (candidate)
@@ -137,6 +144,8 @@
         for list-item-name  = (second recent-menu-x)
         collect list-item-name))
 
+;; http://www.bookshelf.jp/soft/meadow_38.html#SEC560 を参考にしました。
+
 (defun anything-howm-create-new-memo (text)
   (let (memo-text str
         (cbuf (current-buffer)))
@@ -148,33 +157,60 @@
     (goto-char (point-min))
     (end-of-line)))
 
-(defun howm-create-file-with-title (title &optional
-                                    which-template not-use-file here content)
-  (let ((b (current-buffer)))
-    (when (not here)
-      (howm-create-file))
-    (cond ((howm-buffer-empty-p) nil)
-          ((and here howm-create-here-just) (beginning-of-line))
-          (t (howm-create-newline)))
-    (let ((p (point))
-          (insert-f (lambda (switch)
-                      (howm-insert-template (if switch title "")
-                                            b which-template (not switch))))
-          (use-file (not not-use-file)))
-      ;; second candidate which appears when undo is called
-      (let ((end (funcall insert-f not-use-file)))
-        (save-excursion
-          (goto-char end)
-          (insert (or content "")))
-        (undo-boundary)
-        (delete-region p end))
-      (funcall insert-f use-file))
-    (howm-create-finish)))
-
 (defun anything-howm-search ()
   (interactive)
   (anything
    (list anything-c-howm-recent) nil nil nil nil
    "*howm-title-search*"))
+
+
+
+
+;; 以下は作成中
+
+(defun ahogrep-real-to-display (file-line-content)
+  (if (string-match ":\\([0-9]+\\):" file-line-content)       
+       (format "%s:%s|%s"
+               (file-name-nondirectory (substring file-line-content 0 (match-beginning 0)))
+               (match-string 1 file-line-content)
+               (substring file-line-content (match-end 0)))))
+       ;; (format "%s:%s\n %s"
+       ;;         (substring file-line-content 0 (match-beginning 0))
+       ;;         (match-string 1 file-line-content)
+       ;;         (substring file-line-content (match-end 0)))))
+
+(setq anything-c-source-howm-search
+   `((name . "howm-search")     
+     ;; (command . ,command)
+     (init
+     . (lambda ()
+         (with-current-buffer (anything-candidate-buffer 'global)
+             (call-process-shell-command 
+               (concat "egrep -rHin '" anything-howm-search-word "' " anything-howm-data-directory)
+               nil
+               (current-buffer)))))
+     ;; . (lambda ()
+     ;;     (with-current-buffer (anything-candidate-buffer 'global)
+     ;;        (setq default-directory pwd)
+     ;;        (agrep-do-grep command pwd)
+     ;;        (agrep-fontify)
+     ;;        (current-buffer))))
+
+     (candidates-in-buffer)
+     (multiline)
+     (real-to-display . ahogrep-real-to-display);;改行を入れている
+     (action . agrep-goto)
+     (candidate-number-limit . 9999)
+     (migemo)
+     ;; to inherit faces
+     (get-line . buffer-substring)))
+
+(defun anything-howm-grep ()
+  (interactive)
+  (anything
+   (list anything-c-source-howm-search) nil nil nil nil
+   "*howm-title-search*"))
+
+;; (global-set-key (kbd "M-8") 'anything-howm-grep)
 
 (provide 'anything-howm)
