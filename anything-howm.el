@@ -36,7 +36,7 @@
 ;; (require 'anything-howm)
 ;; (setq anything-howm-recent-menu-number-limit 70)
 ;; (setq anything-howm-data-directory "~/Dropbox/howm")
-;; (global-set-key (kbd "M-h") 'anything-howm-search)
+;; (global-set-key (kbd "M-h") 'anything-howm-menu-command)
 ;; (setq anything-sources
 ;;       (list anything-c-source-buffers
 ;;               ...
@@ -45,7 +45,7 @@
 ;; (global-set-key (kbd "M-8") 'anything-howm-grep)
 
 ;; Change Log
-
+;; 1.0.3: メニュー用のソースを新規作成
 ;; 1.0.2: ファイル削除、新ウィンドウで開く、新フレームで開くアクションを追加
 ;;        リファクタリング
 ;; 1.0.1: 新しいメモをつくる機能を追加, migemo 対応
@@ -56,9 +56,12 @@
 ;; TODO
 
 ;; howm-list-all に基づくソースの提供
-;; 全文検索機能
-;; (defun anything-c-moccur-occur-by-moccur-only-function ()を元に
-;; (defun anything-howm-search-only-title ()をつくる
+;; hgrep が何かに使えないかな
+;; 全文検索機能がむずかしい
+
+;; 有益かもしれない情報源メモ
+;; anything-c-moccur-occur-by-moccur-only-function
+
 ;;; Code:
 
 (require 'cl)
@@ -70,19 +73,12 @@
 
 (defvar anything-howm-recent-menu-number-limit 10)
 (defvar anything-howm-persistent-action-buffer "*howm-tmp*")
-(defvar anything-howm-selected-text "")
 (defvar anything-howm-default-title "")
 (defvar anything-howm-search-word "symfony")
 (defvar anything-howm-data-directory "/home")
 
 (setq anything-c-howm-recent
-  '((init .
-      (lambda ()
-        (setq anything-howm-selected-text
-          (if mark-active
-              (buffer-substring-no-properties (region-beginning) (region-end))
-            ""))))
-    (name . "最近のメモ")
+  '((name . "最近のメモ")
     (candidates .
       (lambda ()
         (anything-howm-get-recent-title-list
@@ -103,10 +99,10 @@
              (anything-howm-select-file-by-title candidate))))
        ("Create new memo" .
           (lambda (template)
-            (anything-howm-create-new-memo "")))
+            (anything-howm-create-new-memo nil)))
        ("Create new memo on region" .
           (lambda (template)
-            (anything-howm-create-new-memo anything-howm-selected-text)))
+            (anything-howm-create-new-memo (anything-howm-set-selected-text))))
        ("Delete File" .
           (lambda (candidate)
             (if (y-or-n-p (format "Really delete file %s? "
@@ -144,30 +140,56 @@
         for list-item-name  = (second recent-menu-x)
         collect list-item-name))
 
-;; http://www.bookshelf.jp/soft/meadow_38.html#SEC560 を参考にしました。
-
 (defun anything-howm-create-new-memo (text)
   (let (memo-text str
         (cbuf (current-buffer)))
     (setq str text)
-    (howm-create-file-with-title anything-howm-default-title nil nil nil "")
+    (howm-create-file-with-title anything-howm-default-title nil nil nil nil)
     (save-excursion
       (goto-char (point-max))
       (insert str))
     (goto-char (point-min))
     (end-of-line)))
 
-(defun anything-howm-search ()
+(defun anything-howm-set-selected-text ()
+  (if mark-active
+      (buffer-substring-no-properties (region-beginning) (region-end))
+    ""))
+
+(setq anything-howm-menu-list
+      '(("1 メモを新規作成" . "(anything-howm-create-new-memo nil)")
+        ("2 リージョンからメモを新規作成" . "(anything-howm-create-new-memo (anything-howm-set-selected-text))")
+        ("3 予定(未着手)" . "(作成中)") ;todo
+        ("4 grep 検索(作成中)" . "(作成中)") ;todo
+        ("5 日付挿入" . "(howm-insert-date)")))
+
+(setq anything-c-source-howm-menu
+  '((name . "メニュー")
+    (candidates . anything-howm-menu-list)    
+    (type . sexp)
+    (migemo)))
+
+(defun anything-howm-menu-command ()
   (interactive)
   (anything
-   (list anything-c-howm-recent) nil nil nil nil
-   "*howm-title-search*"))
-
-
-
+   (list
+    anything-c-source-howm-menu
+    anything-c-howm-recent)
+   nil nil nil nil
+   "*anything-howm-menu*"))
 
 ;; 以下は作成中
 
+;; egrep
+;; -n 各行の先頭にファイル内の行番号を付けます (最初の行は 1 です)。
+;; -i 比較時に大文字と小文字を区別しません。
+;; -H ファイル名を表示。
+;; 例 egrep -Hin symfony ~/Dropbox/howm/2009/10/*
+;;    /home/mrkz/Dropbox/howm/2009/10/2009-10-26-224515.howm:1:= [symfony] テスト
+;; "ack-grep -af | xargs egrep -Hin %s" "~/Dropbox/howm"
+;; 出力例 home/mrkz/Dropbox/howm/howm/2009/05/2009-05-01-105846.howm:10:# cd /usr/share/php/symfony1.0/data/bin
+;; /home/mrkz/Dropbox/howm/howm/2009/05/2009-05-08-144337.howm:1
+;;  = [symfony]symfony1.0 でのリダイレクト
 (defun ahogrep-real-to-display (file-line-content)
   (if (string-match ":\\([0-9]+\\):" file-line-content)       
        (format "%s:%s|%s"
@@ -211,6 +233,6 @@
    (list anything-c-source-howm-search) nil nil nil nil
    "*howm-title-search*"))
 
-;; (global-set-key (kbd "M-8") 'anything-howm-grep)
+;(global-set-key (kbd "M-8") 'anything-howm-grep)
 
 (provide 'anything-howm)
