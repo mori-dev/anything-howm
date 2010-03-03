@@ -29,8 +29,6 @@
 
 ;; `anything-howm.el' http://github.com/kitokitoki/anything-howm (this file)
 
-;;  `anything-grep.el' ;; 将来的には自前実装にする予定です。
-
 ;;; Setting Sample
 
 ;; (require 'anything-howm)
@@ -42,9 +40,9 @@
 ;;               ...
 ;;             ))
 ;; (setq anything-howm-data-directory "/home/taro/howm")
-;; (global-set-key (kbd "M-8") 'anything-howm-grep)
 
 ;; Change Log
+;; 1.0.4: アクション"Open Marked howm file", "Delete file(s)" を作成
 ;; 1.0.3: メニュー用のソースを新規作成
 ;; 1.0.2: ファイル削除、新ウィンドウで開く、新フレームで開くアクションを追加
 ;;        リファクタリング
@@ -52,15 +50,6 @@
 ;; 1.0.0: 新規作成
 
 ;;; Commentary:
-
-;; TODO
-
-;; howm-list-all に基づくソースの提供
-;; hgrep が何かに使えないかな
-;; 全文検索機能がむずかしい
-
-;; 有益かもしれない情報源メモ
-;; anything-c-moccur-occur-by-moccur-only-function
 
 ;;; Code:
 
@@ -74,10 +63,9 @@
 (defvar anything-howm-recent-menu-number-limit 10)
 (defvar anything-howm-persistent-action-buffer "*howm-tmp*")
 (defvar anything-howm-default-title "")
-(defvar anything-howm-search-word "symfony")
 (defvar anything-howm-data-directory "/home")
 
-(setq anything-c-howm-recent
+(defvar anything-c-howm-recent
   '((name . "最近のメモ")
     (candidates .
       (lambda ()
@@ -89,6 +77,11 @@
           (lambda (candidate)
             (find-file
              (anything-howm-select-file-by-title candidate))))
+       ("Open Marked howm file" .
+          (lambda (candidate)
+            (dolist (i (anything-marked-candidates))            
+              (find-file
+               (anything-howm-select-file-by-title i)))))
        ("Open howm file in other window" .
           (lambda (candidate)
             (find-file-other-window
@@ -103,12 +96,7 @@
        ("Create new memo on region" .
           (lambda (template)
             (anything-howm-create-new-memo (anything-howm-set-selected-text))))
-       ("Delete File" .
-          (lambda (candidate)
-            (if (y-or-n-p (format "Really delete file %s? "
-                  (anything-howm-select-file-by-title candidate)))
-              (delete-file
-                (anything-howm-select-file-by-title candidate)))))))
+       ("Delete file(s)" . anything-howm-delete-marked-files)))
     (persistent-action .
       (lambda (candidate)
         (anything-howm-persistent-action
@@ -151,19 +139,39 @@
     (goto-char (point-min))
     (end-of-line)))
 
+(defun anything-howm-delete-marked-files (candidate)
+  (anything-aif (anything-marked-candidates)
+      (if (y-or-n-p (format "Delete *%s Files " (length it)))
+          (progn
+            (dolist (i it)
+              (set-text-properties 0 (length i) nil i)
+              (delete-file
+                (anything-howm-select-file-by-title i)))
+            (message "%s Files deleted" (length it)))
+          (message "(No deletions performed)"))
+    (set-text-properties 0 (length candidate) nil candidate)
+    (if (y-or-n-p
+         (format "Really delete file `%s' " (anything-howm-select-file-by-title candidate)))
+        (progn
+          (delete-file
+            (anything-howm-select-file-by-title candidate))
+          (message "1 file deleted"))
+        (message "(No deletions performed)"))))
+
 (defun anything-howm-set-selected-text ()
   (if mark-active
       (buffer-substring-no-properties (region-beginning) (region-end))
     ""))
 
-(setq anything-howm-menu-list
+(defvar anything-howm-menu-list
       '(("1 メモを新規作成" . "(anything-howm-create-new-memo nil)")
         ("2 リージョンからメモを新規作成" . "(anything-howm-create-new-memo (anything-howm-set-selected-text))")
         ("3 予定(未着手)" . "(作成中)") ;todo
         ("4 grep 検索(作成中)" . "(作成中)") ;todo
-        ("5 日付挿入" . "(howm-insert-date)")))
+        ("5 日付挿入" . "(howm-insert-date)")
+        ))
 
-(setq anything-c-source-howm-menu
+(defvar anything-c-source-howm-menu
   '((name . "メニュー")
     (candidates . anything-howm-menu-list)    
     (type . sexp)
@@ -171,68 +179,9 @@
 
 (defun anything-howm-menu-command ()
   (interactive)
-  (anything
-   (list
-    anything-c-source-howm-menu
-    anything-c-howm-recent)
-   nil nil nil nil
+  (anything-other-buffer
+   '(anything-c-source-howm-menu
+     anything-c-howm-recent)
    "*anything-howm-menu*"))
-
-;; 以下は作成中
-
-;; egrep
-;; -n 各行の先頭にファイル内の行番号を付けます (最初の行は 1 です)。
-;; -i 比較時に大文字と小文字を区別しません。
-;; -H ファイル名を表示。
-;; 例 egrep -Hin symfony ~/Dropbox/howm/2009/10/*
-;;    /home/mrkz/Dropbox/howm/2009/10/2009-10-26-224515.howm:1:= [symfony] テスト
-;; "ack-grep -af | xargs egrep -Hin %s" "~/Dropbox/howm"
-;; 出力例 home/mrkz/Dropbox/howm/howm/2009/05/2009-05-01-105846.howm:10:# cd /usr/share/php/symfony1.0/data/bin
-;; /home/mrkz/Dropbox/howm/howm/2009/05/2009-05-08-144337.howm:1
-;;  = [symfony]symfony1.0 でのリダイレクト
-(defun ahogrep-real-to-display (file-line-content)
-  (if (string-match ":\\([0-9]+\\):" file-line-content)       
-       (format "%s:%s|%s"
-               (file-name-nondirectory (substring file-line-content 0 (match-beginning 0)))
-               (match-string 1 file-line-content)
-               (substring file-line-content (match-end 0)))))
-       ;; (format "%s:%s\n %s"
-       ;;         (substring file-line-content 0 (match-beginning 0))
-       ;;         (match-string 1 file-line-content)
-       ;;         (substring file-line-content (match-end 0)))))
-
-(setq anything-c-source-howm-search
-   `((name . "howm-search")     
-     ;; (command . ,command)
-     (init
-     . (lambda ()
-         (with-current-buffer (anything-candidate-buffer 'global)
-             (call-process-shell-command 
-               (concat "egrep -rHin '" anything-howm-search-word "' " anything-howm-data-directory)
-               nil
-               (current-buffer)))))
-     ;; . (lambda ()
-     ;;     (with-current-buffer (anything-candidate-buffer 'global)
-     ;;        (setq default-directory pwd)
-     ;;        (agrep-do-grep command pwd)
-     ;;        (agrep-fontify)
-     ;;        (current-buffer))))
-
-     (candidates-in-buffer)
-     (multiline)
-     (real-to-display . ahogrep-real-to-display);;改行を入れている
-     (action . agrep-goto)
-     (candidate-number-limit . 9999)
-     (migemo)
-     ;; to inherit faces
-     (get-line . buffer-substring)))
-
-(defun anything-howm-grep ()
-  (interactive)
-  (anything
-   (list anything-c-source-howm-search) nil nil nil nil
-   "*howm-title-search*"))
-
-;(global-set-key (kbd "M-8") 'anything-howm-grep)
 
 (provide 'anything-howm)
