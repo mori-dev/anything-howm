@@ -1,6 +1,6 @@
 ;;; anything-howm.el
 
-;; Copyright (C) 2009,2010  kitokitoki
+;; Copyright (C) 2009-2011  kitokitoki
 
 ;; Author: kitokitoki <morihenotegami@gmail.com>
 ;; Keywords: anything, howm
@@ -35,13 +35,11 @@
 ;; (setq anything-howm-recent-menu-number-limit 70)
 ;; (setq anything-howm-data-directory "~/Dropbox/howm")
 ;; (global-set-key (kbd "M-h") 'anything-howm-menu-command)
-;; (setq anything-sources
-;;       (list anything-c-source-buffers
-;;               ...
-;;             ))
 ;; (setq anything-howm-data-directory "/home/taro/howm")
 
 ;; Change Log
+;; 1.0.6: 専用の anything-resume を作成
+;; 1.0.5: メニューリストに検索などの項目を追加。メニューソースでの (migemo)を廃止
 ;; 1.0.4: アクション"Open Marked howm file", "Delete file(s)" を作成
 ;; 1.0.3: メニュー用のソースを新規作成
 ;; 1.0.2: ファイル削除、新ウィンドウで開く、新フレームで開くアクションを追加
@@ -50,6 +48,10 @@
 ;; 1.0.0: 新規作成
 
 ;;; Commentary:
+
+;;; ToDo
+
+;; ToDo/スケジュールを表示したあと呼び出しバッファに戻る処理など
 
 ;;; Code:
 
@@ -62,6 +64,7 @@
 
 (defvar anything-howm-recent-menu-number-limit 10)
 (defvar anything-howm-persistent-action-buffer "*howm-tmp*")
+(defvar anything-howm-menu-buffer "*anything-howm-menu*")
 (defvar anything-howm-default-title "")
 (defvar anything-howm-data-directory "/home")
 
@@ -159,29 +162,40 @@
         (message "(No deletions performed)"))))
 
 (defun anything-howm-set-selected-text ()
-  (if mark-active
+  (if (region-active-p)
       (buffer-substring-no-properties (region-beginning) (region-end))
     ""))
 
 (defvar anything-howm-menu-list
-      '(("1 メモを新規作成" . "(anything-howm-create-new-memo nil)")
-        ("2 リージョンからメモを新規作成" . "(anything-howm-create-new-memo (anything-howm-set-selected-text))")
-        ("3 予定(未着手)" . "(作成中)") ;todo
-        ("4 grep 検索(作成中)" . "(作成中)") ;todo
-        ("5 日付挿入" . "(howm-insert-date)")
-        ))
+      '(("c [メモを作成]" . "(anything-howm-create-new-memo nil)")
+        ("cr[リージョンからメモを作成]" . "(anything-howm-create-new-memo (anything-howm-set-selected-text))")
+        ("s [固定]" . "(howm-list-grep-fixed)")
+        ("g [正規]" . "(howm-list-grep)")
+        ("m [roma]" . "(howm-list-migemo)")
+        ("y [予定]" . "(howm-list-todo)")
+        ("t [Todo]" . "(howm-list-schedule)")))
 
 (defvar anything-c-source-howm-menu
   '((name . "メニュー")
     (candidates . anything-howm-menu-list)    
-    (type . sexp)
-    (migemo)))
+    (type . sexp)))
+
+(defun anything-cached-howm-menu ()
+  (interactive)
+  (if (get-buffer anything-howm-menu-buffer)
+    (anything-resume anything-howm-menu-buffer)
+    (anything-howm-menu-command)))
 
 (defun anything-howm-menu-command ()
   (interactive)
   (anything-other-buffer
    '(anything-c-source-howm-menu
      anything-c-howm-recent)
-   "*anything-howm-menu*"))
+   anything-howm-menu-buffer))
+
+;;; For compatibility
+(unless (fboundp 'region-active-p)
+  (defun region-active-p ()
+    (and transient-mark-mode mark-active)))
 
 (provide 'anything-howm)
