@@ -205,4 +205,9 @@
   (if (get-buffer anything-howm-menu-buffer)
     (anything-resume anything-howm-menu-buffer)))
 
+;; e.x, (global-set-key (kbd "C-c e") (anything-c-howm-fixed-term-command "emacs"))
+(defun anything-c-howm-fixed-term-command (initial)
+  (lexical-let ((initial initial))
+    (lambda () (interactive) (anything 'anything-c-source-howm-recent initial))))
+
 (provide 'anything-howm)
