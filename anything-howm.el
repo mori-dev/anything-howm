@@ -193,9 +193,16 @@
      anything-c-howm-recent)
    anything-howm-menu-buffer))
 
-;;; For compatibility
-(unless (fboundp 'region-active-p)
-  (defun region-active-p ()
-    (and transient-mark-mode mark-active)))
+(defun anything-howm-menu-command ()
+  (interactive)
+  (anything-other-buffer
+   '(anything-c-source-howm-menu
+     anything-c-howm-recent)
+   anything-howm-menu-buffer))
+
+(defun anything-howm-resume ()
+  (interactive)
+  (if (get-buffer anything-howm-menu-buffer)
+    (anything-resume anything-howm-menu-buffer)))
 
 (provide 'anything-howm)
