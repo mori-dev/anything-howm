@@ -76,15 +76,7 @@
          (howm-recent-menu anything-howm-recent-menu-number-limit))))
     (candidate-number-limit . 9999)
     (action .
-      (("Open howm file" .
-          (lambda (candidate)
-            (find-file
-             (anything-howm-select-file-by-title candidate))))
-       ("Open Marked howm file" .
-          (lambda (candidate)
-            (dolist (i (anything-marked-candidates))            
-              (find-file
-               (anything-howm-select-file-by-title i)))))
+      (("Open howm file(s)" . anything-howm-find-files)
        ("Open howm file in other window" .
           (lambda (candidate)
             (find-file-other-window
@@ -100,23 +92,20 @@
           (lambda (template)
             (anything-howm-create-new-memo (anything-howm-set-selected-text))))
        ("Delete file(s)" . anything-howm-delete-marked-files)))
-    (persistent-action .
-      (lambda (candidate)
-        (anything-howm-persistent-action
-         (anything-howm-select-file-by-title candidate))))
+    (persistent-action . anything-howm-persistent-action)
     (cleanup .
       (lambda ()
-        (if (get-buffer anything-howm-persistent-action-buffer)
-          (kill-buffer anything-howm-persistent-action-buffer))))
+        (anything-aif (get-buffer anything-howm-persistent-action-buffer)
+          (kill-buffer it))))
     (migemo)))
 
-(defun anything-howm-persistent-action (c)
-  (let ((b (get-buffer-create anything-howm-persistent-action-buffer)))
-      (with-current-buffer b
+(defun anything-howm-persistent-action (candidate)
+  (let ((buffer (get-buffer-create anything-howm-persistent-action-buffer)))
+      (with-current-buffer buffer
         (erase-buffer)
-        (insert-file-contents c)
+        (insert-file-contents (anything-howm-select-file-by-title candidate))
         (goto-char (point-min)))
-      (pop-to-buffer b)
+      (pop-to-buffer buffer)
       (howm-mode t)))
 
 (defun anything-howm-select-file-by-title (title)
@@ -125,6 +114,12 @@
         for list-item-name  = (second recent-menu-x)
         if (string-equal title list-item-name)
           return list-item-file))
+
+(defun anything-howm-find-files (candidate)
+  (anything-aif (anything-marked-candidates)
+      (dolist (i it)
+        (find-file (anything-howm-select-file-by-title i)))
+    (find-file (anything-howm-select-file-by-title candidate))))
 
 (defun anything-howm-get-recent-title-list (recent-menu-list)
   (loop for recent-menu-x in recent-menu-list
@@ -211,3 +206,63 @@
     (lambda () (interactive) (anything 'anything-c-source-howm-recent initial))))
 
 (provide 'anything-howm)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
