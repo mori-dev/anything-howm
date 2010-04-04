@@ -200,69 +200,35 @@
   (if (get-buffer anything-howm-menu-buffer)
     (anything-resume anything-howm-menu-buffer)))
 
-;; e.x, (global-set-key (kbd "C-c e") (anything-c-howm-fixed-term-command "emacs"))
-(defun anything-c-howm-fixed-term-command (initial)
+;; e.x, (global-set-key (kbd "C-c e") (anything-howm-fixed-term-command "emacs"))
+(defun anything-howm-fixed-term-command (initial)
   (lexical-let ((initial initial))
     (lambda () (interactive) (anything 'anything-c-source-howm-recent initial))))
 
+
+;; experimental code
+;(anything-howm-get-filename (list howm-directory))
+(defun anything-howm-get-filename (file-list)
+    (loop for x in file-list
+          with path-list = nil
+          when (file-directory-p x)
+            for path-list =
+              (append
+                (anything-howm-get-filename
+                 (remove-if
+                  (lambda(y) (string-match "\\.$\\|\\.svn" y))
+                  (directory-files x t)))
+                path-list)
+          else
+            collect x into path-list            
+          end
+          finally return path-list))
+
+(defvar anything-c-source-howm-contents-grep
+ `((name . "anything-howm-contents-grep")
+    (grep-candidates . ,(anything-howm-get-filename (list howm-directory)))
+    (header-name . (lambda (x) (concat x ": " anything-pattern)))
+    (candidate-number-limit . 99999)))
+;; (anything 'anything-c-source-howm-contents-grep)
+
 (provide 'anything-howm)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
