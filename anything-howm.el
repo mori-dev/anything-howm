@@ -37,6 +37,26 @@
 ;; (global-set-key (kbd "M-h") 'anything-howm-menu-command)
 ;; (setq anything-howm-data-directory "/home/taro/howm")
 
+;;; Bug Report:
+;;
+;; If you have problem, send a bug report via M-x anything-howm-send-bug-report.
+;; The step is:
+;;  0) Setup mail in Emacs, the easiest way is:
+;;       (setq user-mail-address "your@mail.address")
+;;       (setq user-full-name "Your Full Name")
+;;       (setq smtpmail-smtp-server "your.smtp.server.jp")
+;;       (setq mail-user-agent 'message-user-agent)
+;;       (setq message-send-mail-function 'message-smtpmail-send-it)
+;;  1) Be sure to use the LATEST version of anything-howm.el.
+;;  2) Enable debugger. M-x toggle-debug-on-error or (setq debug-on-error t)
+;;  3) Use Lisp version instead of compiled one: (load "anything-howm.el")
+;;  4) Do it!
+;;  5) If you got an error, please do not close *Backtrace* buffer.
+;;  6) M-x anything-howm-send-bug-report and M-x insert-buffer *Backtrace*
+;;  7) Describe the bug using a precise recipe.
+;;  8) Type C-c C-c to send.
+;;  # If you are a Japanese, please write in Japanese:-)
+
 ;; Change Log
 ;; 1.0.6: 専用の anything-resume を作成
 ;; 1.0.5: メニューリストに検索などの項目を追加。メニューソースでの (migemo)を廃止
@@ -67,6 +87,20 @@
 (defvar anything-howm-menu-buffer "*anything-howm-menu*")
 (defvar anything-howm-default-title "")
 (defvar anything-howm-data-directory "/home")
+
+;;; Version
+
+(defconst anything-howm-version "1.0.6"
+  "The version number of the file anything-howm.el.")
+
+(defun anything-howm-version (&optional here)
+  "Show the anything-howm version in the echo area.
+With prefix arg HERE, insert it at point."
+  (interactive "P")
+  (let ((version (format "anything-howm version %s" anything-howm-version)))
+    (message version)
+    (if here
+      (insert version))))
 
 (defvar anything-c-howm-recent
   '((name . "最近のメモ")
@@ -230,5 +264,29 @@
     (header-name . (lambda (x) (concat x ": " anything-pattern)))
     (candidate-number-limit . 99999)))
 ;; (anything 'anything-c-source-howm-contents-grep)
+
+;;;; Bug report
+(defvar anything-howm-maintainer-mail-address
+  (concat "morihen" "otegami@gm" "ail.com"))
+(defvar anything-howm-bug-report-salutation
+  "Describe bug below, using a precise recipe.
+
+When I executed M-x ...
+
+How to send a bug report:
+  1) Be sure to use the LATEST version of anything-howm.el.
+  2) Enable debugger. M-x toggle-debug-on-error or (setq debug-on-error t)
+  3) Use Lisp version instead of compiled one: (load \"anything-howm.el\")
+  4) If you got an error, please paste *Backtrace* buffer.
+  5) Type C-c C-c to send.
+# If you are a Japanese, please write in Japanese:-)")
+(defun anything-howm-send-bug-report ()
+  (interactive)
+  (reporter-submit-bug-report
+   anything-howm-maintainer-mail-address
+   "anything-howm.el"
+   (apropos-internal "^eldoc-" 'boundp)
+   nil nil
+   anything-howm-bug-report-salutation))
 
 (provide 'anything-howm)
