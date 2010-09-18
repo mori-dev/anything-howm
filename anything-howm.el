@@ -1,10 +1,10 @@
 ;;; anything-howm.el
 
-;; Copyright (C) 2009-2011  kitokitoki
+;; Copyright (C) 2009-2011 kitokitoki
 
-;; Author: kitokitoki <morihenotegami@gmail.com>
+;; Author: kitokitoki <mori.dev.asdf@gmail.com>
 ;; Keywords: anything, howm
-;; Prefix: anything-howm
+;; Prefix: anything-howm-
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -32,10 +32,30 @@
 ;;; Setting Sample
 
 ;; (require 'anything-howm)
+;; 
 ;; (setq anything-howm-recent-menu-number-limit 70)
-;; (setq anything-howm-data-directory "~/Dropbox/howm")
+;; (setq anything-howm-data-directory "/path/to/howm-directory")
 ;; (global-set-key (kbd "M-h") 'anything-howm-menu-command)
-;; (setq anything-howm-data-directory "/home/taro/howm")
+;;
+;; (defun anything-buffers ()
+;;   (interactive)
+;;   (anything-other-buffer
+;;    '(anything-c-source-buffers+-howm-title
+;;      anything-c-source-recentf
+;;      ...
+;;      )
+;;    "*Buffer+File*"))
+;; (global-set-key (kbd "M-h") 'anything-buffers)
+;;
+;; or
+;;
+;; (setq anything-sources
+;;       (list
+;;         anything-c-source-buffers+-howm-title ;これを追加
+;;         ;; anything-c-source-buffers はコメントアウト
+;;         anything-c-source-recentf など
+;;         ...
+;;         ))
 
 ;;; Bug Report:
 ;;
@@ -58,6 +78,8 @@
 ;;  # If you are a Japanese, please write in Japanese:-)
 
 ;; Change Log
+;; 1.0.7: ファイル名ではなくタイトルを一覧表示する
+;;        anything-c-source-buffers+-howm-title を追加
 ;; 1.0.6: 専用の anything-resume を作成
 ;; 1.0.5: メニューリストに検索などの項目を追加。メニューソースでの (migemo)を廃止
 ;; 1.0.4: アクション"Open Marked howm file", "Delete file(s)" を作成
@@ -68,10 +90,6 @@
 ;; 1.0.0: 新規作成
 
 ;;; Commentary:
-
-;;; ToDo
-
-;; ToDo/スケジュールを表示したあと呼び出しバッファに戻る処理など
 
 ;;; Code:
 
@@ -234,6 +252,39 @@ With prefix arg HERE, insert it at point."
   (if (get-buffer anything-howm-menu-buffer)
     (anything-resume anything-howm-menu-buffer)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; howm のファイルは日付形式のため，複数開いていると見分けにくい。
+;; anything-c-source-buffers+-howm-title では、一覧時にタイトルを表示する
+
+(defvar anything-c-source-buffers+-howm-title      
+  '((name . "Buffers")
+    (candidates . anything-c-buffer-list)
+    (real-to-display . anything-howm-title-real-to-display)
+    (type . buffer)
+    (candidate-transformer
+         anything-c-skip-current-buffer
+         anything-c-highlight-buffers
+         anything-c-skip-boring-buffers)
+    (persistent-action . anything-c-buffers+-persistent-action)
+    (persistent-help . "Show this buffer / C-u \\[anything-execute-persistent-action]: Kill this buffer")))
+;;(anything anything-c-source-buffers+-howm-title)
+
+(defun anything-howm-title-real-to-display (file-name)
+  (if (equal "howm" (file-name-extension file-name))
+      (anything-howm-title-get-title file-name)
+    file-name))
+
+(defun anything-howm-title-get-title (buffer)
+  (with-current-buffer buffer
+    (let ((point (point-min)))
+      (save-excursion
+        (goto-char (point-min))
+        (end-of-line)
+        (buffer-substring point (point))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; e.x, (global-set-key (kbd "C-c e") (anything-howm-fixed-term-command "emacs"))
 (defun anything-howm-fixed-term-command (initial)
   (lexical-let ((initial initial))
@@ -267,7 +318,7 @@ With prefix arg HERE, insert it at point."
 
 ;;;; Bug report
 (defvar anything-howm-maintainer-mail-address
-  (concat "morihen" "otegami@gm" "ail.com"))
+  (concat "mor" "i.dev.asdf@gm" "ail.com"))
 (defvar anything-howm-bug-report-salutation
   "Describe bug below, using a precise recipe.
 
