@@ -122,10 +122,12 @@ With prefix arg HERE, insert it at point."
 
 (defvar anything-c-howm-recent
   '((name . "最近のメモ")
-    (candidates .
-      (lambda ()
-        (anything-howm-get-recent-title-list
-         (howm-recent-menu anything-howm-recent-menu-number-limit))))
+    (init . (lambda ()
+              (with-current-buffer (anything-candidate-buffer 'global)
+                (mapcar (lambda (x) (insert x "\n"))
+                        (anything-howm-get-recent-title-list
+                          (howm-recent-menu anything-howm-recent-menu-number-limit))))))
+    (candidates-in-buffer)    
     (candidate-number-limit . 9999)
     (action .
       (("Open howm file(s)" . anything-howm-find-files)
@@ -310,7 +312,7 @@ With prefix arg HERE, insert it at point."
           finally return path-list))
 
 (defvar anything-c-source-howm-contents-grep
- `((name . "anything-howm-contents-grep")
+  `((name . "anything-howm-contents-grep")
     (grep-candidates . ,(anything-howm-get-filename (list howm-directory)))
     (header-name . (lambda (x) (concat x ": " anything-pattern)))
     (candidate-number-limit . 99999)))
