@@ -124,9 +124,10 @@ With prefix arg HERE, insert it at point."
   '((name . "最近のメモ")
     (init . (lambda ()
               (with-current-buffer (anything-candidate-buffer 'global)
-                (mapcar (lambda (x) (insert x "\n"))
-                        (anything-howm-get-recent-title-list
-                          (howm-recent-menu anything-howm-recent-menu-number-limit))))))
+                (insert (mapconcat 'identity
+                                   (anything-howm-get-recent-title-list
+                                    (howm-recent-menu anything-howm-recent-menu-number-limit))
+                                   "\n")))))
     (candidates-in-buffer)    
     (candidate-number-limit . 9999)
     (action .
