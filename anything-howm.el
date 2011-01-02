@@ -22,20 +22,23 @@
 ;;; Installation:
 
 ;; install requires libraries:
-;; `anything.el' http://www.emacswiki.org/emacs/anything.el
+;; `migemo'                    http://0xcc.net/migemo/
+;; `anything.el'               http://www.emacswiki.org/emacs/anything.el
+;; `anything-config.el'        http://www.emacswiki.org/emacs/anything-config.el
 ;; `anything-match-plugin.el'  http://www.emacswiki.org/emacs/anything-match-plugin.el
-;; `anything-migemo.el' http://www.emacswiki.org/emacs/anything-migemo.el
-;; `howm'  http://howm.sourceforge.jp/index-j.html
+;; `anything-migemo.el'        http://www.emacswiki.org/emacs/anything-migemo.el
+;; `howm'                      http://howm.sourceforge.jp/index-j.html
 
-;; `anything-howm.el' http://github.com/kitokitoki/anything-howm (this file)
+;; `anything-howm.el'          http://github.com/kitokitoki/anything-howm (this file)
 
 ;;; Setting Sample
 
 ;; (require 'anything-howm)
 ;; 
-;; (setq anything-howm-recent-menu-number-limit 70)
+;; (setq anything-howm-recent-menu-number-limit 600)
 ;; (setq anything-howm-data-directory "/path/to/howm-directory")
-;; (global-set-key (kbd "M-h") 'anything-howm-menu-command)
+;; (global-set-key (kbd "C-2") 'anything-howm-menu-command)
+;; (global-set-key (kbd "C-3") 'anything-cached-howm-menu)
 ;;
 ;; (defun anything-buffers ()
 ;;   (interactive)
@@ -104,7 +107,8 @@
 (defvar anything-howm-persistent-action-buffer "*howm-tmp*")
 (defvar anything-howm-menu-buffer "*anything-howm-menu*")
 (defvar anything-howm-default-title "")
-(defvar anything-howm-data-directory "/home")
+(defvar anything-howm-data-directory "/path/to/howm-data-directory")
+(defvar anything-howm-migemo-enable-p t)
 
 ;;; Version
 
@@ -120,7 +124,7 @@ With prefix arg HERE, insert it at point."
     (if here
       (insert version))))
 
-(defvar anything-c-howm-recent
+(setq anything-c-howm-recent
   '((name . "最近のメモ")
     (init . (lambda ()
               (with-current-buffer (anything-candidate-buffer 'global)
@@ -152,7 +156,9 @@ With prefix arg HERE, insert it at point."
       (lambda ()
         (anything-aif (get-buffer anything-howm-persistent-action-buffer)
           (kill-buffer it))))
-    (migemo)))
+    (migemo)
+    ;; (when anything-howm-migemo-enable-p (migemo))    
+    ))
 
 (defun anything-howm-persistent-action (candidate)
   (let ((buffer (get-buffer-create anything-howm-persistent-action-buffer)))
@@ -232,28 +238,29 @@ With prefix arg HERE, insert it at point."
 
 (defun anything-cached-howm-menu ()
   (interactive)
-  (if (get-buffer anything-howm-menu-buffer)
-    (anything-resume anything-howm-menu-buffer)
-    (anything-howm-menu-command)))
+  (let ((anything-display-function 'anything-howm-display-buffer))    
+    (if (get-buffer anything-howm-menu-buffer)
+        (anything-resume anything-howm-menu-buffer)
+      (anything-howm-menu-command))))
 
 (defun anything-howm-menu-command ()
   (interactive)
-  (anything-other-buffer
-   '(anything-c-source-howm-menu
-     anything-c-howm-recent)
-   anything-howm-menu-buffer))
-
-(defun anything-howm-menu-command ()
-  (interactive)
-  (anything-other-buffer
-   '(anything-c-source-howm-menu
-     anything-c-howm-recent)
-   anything-howm-menu-buffer))
+  (let ((anything-display-function 'anything-howm-display-buffer))
+    (anything-other-buffer
+     '(anything-c-source-howm-menu
+       anything-c-howm-recent)
+     anything-howm-menu-buffer)))
 
 (defun anything-howm-resume ()
   (interactive)
   (if (get-buffer anything-howm-menu-buffer)
-    (anything-resume anything-howm-menu-buffer)))
+      (anything-resume anything-howm-menu-buffer)))
+
+(defun anything-howm-display-buffer (buf)
+  "左右分割で表示する"
+  (delete-other-windows)
+  (split-window (selected-window) nil t)
+  (pop-to-buffer buf))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -292,7 +299,6 @@ With prefix arg HERE, insert it at point."
 (defun anything-howm-fixed-term-command (initial)
   (lexical-let ((initial initial))
     (lambda () (interactive) (anything 'anything-c-source-howm-recent initial))))
-
 
 ;; experimental code
 ;(anything-howm-get-filename (list howm-directory))
