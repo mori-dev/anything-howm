@@ -251,8 +251,8 @@ With prefix arg HERE, insert it at point."
 
 (defun anything-howm-resume ()
   (interactive)
-  (if (get-buffer anything-howm-menu-buffer)
-      (anything-resume anything-howm-menu-buffer)))
+  (when (get-buffer anything-howm-menu-buffer)
+    (anything-resume anything-howm-menu-buffer)))
 
 (defun anything-howm-display-buffer (buf)
   "左右分割で表示する"
