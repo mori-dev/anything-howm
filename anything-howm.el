@@ -111,7 +111,7 @@
 
 ;;; Version
 
-(defconst anything-howm-version "1.0.6"
+(defconst anything-howm-version "1.0.7"
   "The version number of the file anything-howm.el.")
 
 (defun anything-howm-version (&optional here)
