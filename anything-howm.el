@@ -123,7 +123,7 @@ With prefix arg HERE, insert it at point."
     (if here
       (insert version))))
 
-(setq anything-c-howm-recent
+(defvar anything-c-howm-recent
   '((name . "最近のメモ")
     (init . (lambda ()
               (with-current-buffer (anything-candidate-buffer 'global)
