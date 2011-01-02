@@ -108,7 +108,6 @@
 (defvar anything-howm-menu-buffer "*anything-howm-menu*")
 (defvar anything-howm-default-title "")
 (defvar anything-howm-data-directory "/path/to/howm-data-directory")
-(defvar anything-howm-migemo-enable-p t)
 
 ;;; Version
 
@@ -157,7 +156,6 @@ With prefix arg HERE, insert it at point."
         (anything-aif (get-buffer anything-howm-persistent-action-buffer)
           (kill-buffer it))))
     (migemo)
-    ;; (when anything-howm-migemo-enable-p (migemo))    
     ))
 
 (defun anything-howm-persistent-action (candidate)
