@@ -131,7 +131,7 @@ With prefix arg HERE, insert it at point."
                                    (anything-howm-get-recent-title-list
                                     (howm-recent-menu anything-howm-recent-menu-number-limit))
                                    "\n")))))
-    (candidates-in-buffer)    
+    (candidates-in-buffer)
     (candidate-number-limit . 9999)
     (action .
       (("Open howm file(s)" . anything-howm-find-files)
@@ -221,7 +221,7 @@ With prefix arg HERE, insert it at point."
     ""))
 
 (defvar anything-howm-menu-list
-      '(("c [メモを作成]" . "(anything-howm-create-new-memo nil)")
+      '(("c [メモを作成]" . "(anything-howm-create-new-memo \"\")")
         ("cr[リージョンからメモを作成]" . "(anything-howm-create-new-memo (anything-howm-set-selected-text))")
         ("s [固定]" . "(howm-list-grep-fixed)")
         ("g [正規]" . "(howm-list-grep)")
@@ -265,7 +265,7 @@ With prefix arg HERE, insert it at point."
 ;; howm のファイルは日付形式のため，複数開いていると見分けにくい。
 ;; anything-c-source-buffers+-howm-title では、一覧時にタイトルを表示する
 
-(defvar anything-c-source-buffers+-howm-title      
+(defvar anything-c-source-buffers+-howm-title
   '((name . "Buffers")
     (candidates . anything-c-buffer-list)
     (real-to-display . anything-howm-title-real-to-display)
