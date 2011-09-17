@@ -145,7 +145,7 @@ With prefix arg HERE, insert it at point."
              (anything-howm-select-file-by-title candidate))))
        ("Create new memo" .
           (lambda (template)
-            (anything-howm-create-new-memo nil)))
+            (anything-howm-create-new-memo "")))
        ("Create new memo on region" .
           (lambda (template)
             (anything-howm-create-new-memo (anything-howm-set-selected-text))))
