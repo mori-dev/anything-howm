@@ -1,4 +1,4 @@
-;;; anything-howm.el
+;;; anything-howm.el --- Anything completion for howm
 
 ;; Copyright (C) 2009-2011 kitokitoki
 
