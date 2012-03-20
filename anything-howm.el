@@ -1,6 +1,7 @@
 ;;; anything-howm.el --- Anything completion for howm
 
 ;; Copyright (C) 2009-2011 kitokitoki
+;;               2012-2030 mori_dev
 
 ;; Author: kitokitoki <mori.dev.asdf@gmail.com>
 ;; Keywords: anything, howm
