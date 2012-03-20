@@ -34,7 +34,7 @@
 ;;; Setting Sample
 
 ;; (require 'anything-howm)
-;; 
+;;
 ;; (setq anything-howm-recent-menu-number-limit 600)
 ;; (setq anything-howm-data-directory "/path/to/howm-directory")
 ;; (global-set-key (kbd "C-2") 'anything-howm-menu-command)
@@ -99,7 +99,7 @@
 (require 'cl)
 (require 'anything)
 (require 'anything-match-plugin)
-(require 'anything-migemo)
+(require 'anything-migemo nil t)
 (require 'howm)
 (require 'howm-menu)
 
@@ -108,10 +108,11 @@
 (defvar anything-howm-menu-buffer "*anything-howm-menu*")
 (defvar anything-howm-default-title "")
 (defvar anything-howm-data-directory "/path/to/howm-data-directory")
+(defvar anything-howm-use-migemo nil)
 
 ;;; Version
 
-(defconst anything-howm-version "1.0.7"
+(defconst anything-howm-version "1.0.8"
   "The version number of the file anything-howm.el.")
 
 (defun anything-howm-version (&optional here)
@@ -122,6 +123,7 @@ With prefix arg HERE, insert it at point."
     (message version)
     (if here
       (insert version))))
+
 
 (defvar anything-c-howm-recent
   '((name . "最近のメモ")
@@ -154,9 +156,10 @@ With prefix arg HERE, insert it at point."
     (cleanup .
       (lambda ()
         (anything-aif (get-buffer anything-howm-persistent-action-buffer)
-          (kill-buffer it))))
-    (migemo)
-    ))
+          (kill-buffer it))))))
+
+(when anything-howm-use-migemo
+  (push '(migemo) anything-c-howm-recent))
 
 (defun anything-howm-persistent-action (candidate)
   (let ((buffer (get-buffer-create anything-howm-persistent-action-buffer)))
@@ -231,12 +234,12 @@ With prefix arg HERE, insert it at point."
 
 (defvar anything-c-source-howm-menu
   '((name . "メニュー")
-    (candidates . anything-howm-menu-list)    
+    (candidates . anything-howm-menu-list)
     (type . sexp)))
 
 (defun anything-cached-howm-menu ()
   (interactive)
-  (let ((anything-display-function 'anything-howm-display-buffer))    
+  (let ((anything-display-function 'anything-howm-display-buffer))
     (if (get-buffer anything-howm-menu-buffer)
         (anything-resume anything-howm-menu-buffer)
       (anything-howm-menu-command))))
@@ -276,12 +279,18 @@ With prefix arg HERE, insert it at point."
          anything-c-skip-boring-buffers)
     (persistent-action . anything-c-buffers+-persistent-action)
     (persistent-help . "Show this buffer / C-u \\[anything-execute-persistent-action]: Kill this buffer")))
-;;(anything anything-c-source-buffers+-howm-title)
+
+;; anything-c-buffers-persistent-kill and anything-c-switch-to-buffer are defined at anything-config.el.
+(defun anything-c-buffers+-persistent-action (candidate)
+  (if current-prefix-arg
+      (anything-c-buffers-persistent-kill candidate)
+    (anything-c-switch-to-buffer candidate)))
 
 (defun anything-howm-title-real-to-display (file-name)
-  (if (equal "howm" (file-name-extension file-name))
+  (with-current-buffer (get-buffer file-name)
+    (if howm-mode
       (anything-howm-title-get-title file-name)
-    file-name))
+    file-name)))
 
 (defun anything-howm-title-get-title (buffer)
   (with-current-buffer buffer
@@ -312,7 +321,7 @@ With prefix arg HERE, insert it at point."
                   (directory-files x t)))
                 path-list)
           else
-            collect x into path-list            
+            collect x into path-list
           end
           finally return path-list))
 
