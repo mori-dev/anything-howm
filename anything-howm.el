@@ -111,6 +111,8 @@
 (defvar anything-howm-data-directory "/path/to/howm-data-directory")
 (defvar anything-howm-use-migemo nil)
 
+(defvar anything-howm-howm-full-path-directory (expand-file-name howm-directory))
+
 ;;; Version
 
 (defconst anything-howm-version "1.0.8"
@@ -289,9 +291,19 @@ With prefix arg HERE, insert it at point."
 
 (defun anything-howm-title-real-to-display (file-name)
   (with-current-buffer (get-buffer file-name)
-    (if howm-mode
+    (if (and howm-mode
+             (anything-howm-in-howm-dir-p file-name))
+             ;; (string-match anything-howm-howm-full-path-directory (buffer-file-name (get-buffer file-name))))
       (anything-howm-title-get-title file-name)
     file-name)))
+
+(defun anything-howm-in-howm-dir-p (file-name)
+  (anything-howm-!!
+    (string-match anything-howm-howm-full-path-directory
+                  (buffer-file-name (get-buffer file-name)))))
+
+(defun anything-howm-!! (arg)
+  (not (not arg)))
 
 (defun anything-howm-title-get-title (buffer)
   (with-current-buffer buffer
