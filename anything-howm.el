@@ -62,6 +62,7 @@
 ;;         ))
 
 ;; Change Log
+;; 1.1.0: リファクタ anything-c-source-howm-recent の内部の無名関数に名前を付与
 ;; 1.0.9: prefix を anything-howm- から ah: へ変更
 ;; 1.0.8: 拡張子 .homn での判定処理を
 ;;        howm-directory 以下の howm-mode かに変更
@@ -113,16 +114,11 @@ With prefix arg HERE, insert it at point."
       (insert version))))
 
 
-(defvar anything-c-howm-recent
-  '((name . "最近のメモ")
-    (init . (lambda ()
-              (with-current-buffer (anything-candidate-buffer 'global)
-                (insert (mapconcat 'identity
-                                   (ah:get-recent-title-list
-                                    (howm-recent-menu ah:recent-menu-number-limit))
-                                   "\n")))))
+(defvar anything-c-source-howm-recent
+  '((name    . "最近のメモ")
+    (init    . anything-c-howm-recent-init)
     (candidates-in-buffer)
-    (candidate-number-limit . 9999)
+    (candidate-number-limit . 10000000)
     (action .
       (("Open howm file(s)" . ah:find-files)
        ("Open howm file in other window" .
@@ -140,16 +136,21 @@ With prefix arg HERE, insert it at point."
           (lambda (template)
             (ah:create-new-memo (ah:set-selected-text))))
        ("Delete file(s)" . ah:delete-marked-files)))
-    (persistent-action . ah:persistent-action)
-    (cleanup .
-      (lambda ()
-        (anything-aif (get-buffer ah:persistent-action-buffer)
-          (kill-buffer it))))))
+    (persistent-action . anything-howm-persistent-action)
+    (cleanup . anything-c-howm-recent-cleanup)))
 
-(when ah:use-migemo
-  (push '(migemo) anything-c-howm-recent))
+(defun anything-c-howm-recent-init ()
+  (with-current-buffer (anything-candidate-buffer 'global)
+    (insert (mapconcat 'identity
+                       (ah:get-recent-title-list
+                        (howm-recent-menu ah:recent-menu-number-limit))
+                       "\n"))))
 
-(defun ah:persistent-action (candidate)
+(defun anything-c-howm-recent-cleanup ()
+  (anything-aif (get-buffer ah:persistent-action-buffer)
+      (kill-buffer it)))
+
+(defun anything-howm-persistent-action (candidate)
   (let ((buffer (get-buffer-create ah:persistent-action-buffer)))
       (with-current-buffer buffer
         (erase-buffer)
@@ -157,6 +158,9 @@ With prefix arg HERE, insert it at point."
         (goto-char (point-min)))
       (pop-to-buffer buffer)
       (howm-mode t)))
+
+(when ah:use-migemo
+  (push '(migemo) anything-c-source-howm-recent))
 
 (defun ah:select-file-by-title (title)
   (loop for recent-menu-x in (howm-recent-menu ah:recent-menu-number-limit)
@@ -238,7 +242,7 @@ With prefix arg HERE, insert it at point."
   (let ((anything-display-function 'ah:display-buffer))
     (anything-other-buffer
      '(anything-c-source-howm-menu
-       anything-c-howm-recent)
+       anything-c-source-howm-recent)
      ah:menu-buffer)))
 
 (defun ah:resume ()
