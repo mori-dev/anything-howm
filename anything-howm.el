@@ -37,7 +37,6 @@
 ;; (require 'anything-howm)
 ;;
 ;; (setq ah:recent-menu-number-limit 600)
-;; (setq ah:data-directory "/path/to/howm-directory")
 ;; (global-set-key (kbd "C-2") 'ah:menu-command)
 ;; (global-set-key (kbd "C-3") 'ah:cached-howm-menu)
 ;;
@@ -93,7 +92,6 @@
 (defvar ah:persistent-action-buffer "*howm-tmp*")
 (defvar ah:menu-buffer "*anything-howm-menu*")
 (defvar ah:default-title "")
-(defvar ah:data-directory "/path/to/howm-data-directory")
 (defvar ah:use-migemo nil)
 
 (defvar ah:howm-full-path-directory (expand-file-name howm-directory))
