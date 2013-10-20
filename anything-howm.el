@@ -61,6 +61,8 @@
 ;;         ))
 
 ;; Change Log
+;; 1.1.1: ファイル一覧をハッシュでもつことで高速化
+;;      : ファイル選択時に内容をプレビュー
 ;; 1.1.0: リファクタ anything-c-source-howm-recent の内部の無名関数に名前を付与
 ;; 1.0.9: prefix を anything-howm- から ah: へ変更
 ;; 1.0.8: 拡張子 .homn での判定処理を
@@ -95,11 +97,15 @@
 (defvar ah:use-migemo nil)
 
 (defvar ah:howm-full-path-directory (expand-file-name howm-directory))
+(defvar ah:key-separator ":")
+(defvar ah:menu-file-pattern "0000-00-00-000000.howm$")
+(defvar ah:recent-hash)
+(defvar ah:recent-list)
 
 
 ;;; Version
 
-(defconst anything-howm-version "1.0.8"
+(defconst anything-howm-version "1.1.0"
   "The version number of the file anything-howm.el.")
 
 (defun anything-howm-version (&optional here)
@@ -116,6 +122,7 @@ With prefix arg HERE, insert it at point."
   '((name    . "最近のメモ")
     (init    . anything-c-howm-recent-init)
     (candidates-in-buffer)
+    (real-to-display . ah:title-real-to-display)
     (candidate-number-limit . 10000000)
     (action .
       (("Open howm file(s)" . ah:find-files)
@@ -138,11 +145,16 @@ With prefix arg HERE, insert it at point."
     (cleanup . anything-c-howm-recent-cleanup)))
 
 (defun anything-c-howm-recent-init ()
-  (with-current-buffer (anything-candidate-buffer 'global)
-    (insert (mapconcat 'identity
-                       (ah:get-recent-title-list
-                        (howm-recent-menu ah:recent-menu-number-limit))
-                       "\n"))))
+  (with-current-buffer (anything-candidate-buffer 'global) 
+    (setq ah:recent-hash (make-hash-table :test 'equal))
+    (setq ah:recent-list (howm-recent-menu ah:recent-menu-number-limit))
+    (let ((candidate-num -1))
+      (mapc (lambda(file)
+	      (cond ((not (string-match-p ah:menu-file-pattern (first file)))
+		     (incf candidate-num)
+		     (puthash (concat (number-to-string candidate-num) ah:key-separator (second file)) (first file) ah:recent-hash)
+		     ))) ah:recent-list))
+    (insert (mapconcat 'identity (loop for k being the hash-keys in ah:recent-hash collect k) "\n"))))
 
 (defun anything-c-howm-recent-cleanup ()
   (anything-aif (get-buffer ah:persistent-action-buffer)
@@ -150,27 +162,21 @@ With prefix arg HERE, insert it at point."
 
 (defun anything-howm-persistent-action (candidate)
   (let ((buffer (get-buffer-create ah:persistent-action-buffer)))
-      (with-current-buffer buffer
-        (erase-buffer)
-        (insert-file-contents (ah:select-file-by-title candidate))
-        (goto-char (point-min)))
-      (pop-to-buffer buffer)
-      (howm-mode t)))
+    (with-current-buffer buffer
+      (erase-buffer)
+      (insert-file-contents (gethash candidate ah:recent-hash))
+      (goto-char (point-min)))
+    (pop-to-buffer buffer)
+    (howm-mode t)))
 
 (when ah:use-migemo
   (push '(migemo) anything-c-source-howm-recent))
 
 (defun ah:select-file-by-title (title)
-  (loop for recent-menu-x in (howm-recent-menu ah:recent-menu-number-limit)
-        for list-item-file  = (first recent-menu-x)
-        for list-item-name  = (second recent-menu-x)
-        if (string-equal title list-item-name)
-          return list-item-file))
+  (find-file (gethash candidate ah:recent-hash)))
 
 (defun ah:find-files (candidate)
   (anything-aif (anything-marked-candidates)
-      (dolist (i it)
-        (find-file (ah:select-file-by-title i)))
     (find-file (ah:select-file-by-title candidate))))
 
 (defun ah:get-recent-title-list (recent-menu-list)
@@ -237,11 +243,13 @@ With prefix arg HERE, insert it at point."
 
 (defun ah:menu-command ()
   (interactive)
+  (ad-activate-regexp "anything-howm-preview")
   (let ((anything-display-function 'ah:display-buffer))
     (anything-other-buffer
      '(anything-c-source-howm-menu
        anything-c-source-howm-recent)
-     ah:menu-buffer)))
+     ah:menu-buffer))
+  (ad-deactivate-regexp "anything-howm-preview"))
 
 (defun ah:resume ()
   (interactive)
@@ -251,7 +259,8 @@ With prefix arg HERE, insert it at point."
 (defun ah:display-buffer (buf)
   "左右分割で表示する"
   (delete-other-windows)
-  (split-window (selected-window) nil t)
+  (split-window (selected-window) 25 t)
+  (other-window 1)
   (pop-to-buffer buf))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -277,12 +286,8 @@ With prefix arg HERE, insert it at point."
       (anything-c-buffers-persistent-kill candidate)
     (anything-c-switch-to-buffer candidate)))
 
-(defun ah:title-real-to-display (file-name)
-  (with-current-buffer (get-buffer file-name)
-    (if (and howm-mode
-             (ah:in-howm-dir-p file-name))
-      (ah:title-get-title file-name)
-    file-name)))
+(defun ah:title-real-to-display (candidate)
+  (if (string-match "^[0-9]*:\\(.*\\)" candidate) (match-string 1 candidate)))
 
 (defun ah:in-howm-dir-p (file-name)
   (ah:!! (string-match ah:howm-full-path-directory
@@ -298,6 +303,13 @@ With prefix arg HERE, insert it at point."
         (goto-char (point-min))
         (end-of-line)
         (buffer-substring point (point))))))
+
+;;移動した時に内容をプレビューする
+(defadvice anything-move-selection-common (after anything-howm-preview)
+  (when (string= (cdr (assq 'name (anything-get-current-source)
+			    )) "最近のメモ" )
+    (anything-execute-persistent-action)))
+(ad-deactivate-regexp "anything-howm-preview")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
